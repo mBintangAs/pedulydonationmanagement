@@ -101,7 +101,7 @@ class DonationController extends Controller
                 return BaseResponse::errorMessage('Donation not found');
             }
 
-            $calculatedSignatureKey = hash('sha512', $donation->order_id . $request->status_code . $donation->total . env('MIDTRANS_SERVER_KEY'));
+            $calculatedSignatureKey = hash('sha512', $donation->order_id . $request->status_code . $donation->total . config('MIDTRANS_SERVER_KEY'));
             if ($calculatedSignatureKey !== $request->signature_key) {
                 return BaseResponse::errorMessage('Invalid signature key');
             }
@@ -124,11 +124,11 @@ class DonationController extends Controller
                 return BaseResponse::errorMessage('Donation not found');
             }
             // Cek status ke Midtrans
-            $serverKey = env('MIDTRANS_SERVER_KEY');
+            $serverKey = config('MIDTRANS_SERVER_KEY');
             $authString = base64_encode($serverKey);
             // dd($authString);
             $orderId = $donation->order_id;
-            $midtransApiLink = env('MIDTRANS_API_LINK');
+            $midtransApiLink = config('MIDTRANS_API_LINK');
             $midtransUrl = rtrim($midtransApiLink, '/') . '/v2/' . $orderId . '/status';
 
             $response = \Http::
