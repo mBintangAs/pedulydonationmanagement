@@ -20,8 +20,8 @@ class MidtransCharge
         $this->payment_method = $payment_method;
         $this->gross_amount = $gross_amount;
         $this->bank_name = $bank_name;
-        $this->server_key = env('MIDTRANS_SERVER_KEY');
-        $this->api_link = env('MIDTRANS_API_LINK');
+        $this->server_key = config('midtrans.MIDTRANS_SERVER_KEY');
+        $this->api_link = config('midtrans.MIDTRANS_API_LINK');
     }
 
     public function setBankName($bank_name)

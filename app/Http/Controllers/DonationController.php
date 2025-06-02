@@ -56,7 +56,7 @@ class DonationController extends Controller
             $donation->total = $request->total;
             $donation->method = $request->method;
             // dd($donation->method);
-            $donation->order_id = 'FUND-' . time();
+            $donation->order_id = 'INV' . time();
             $midtrans = new MidtransCharge($donation->method, $donation->order_id, $donation->total);
             if ($request->method == 'bank_transfer') {
                 if (!$request->bank_name) {
@@ -73,7 +73,10 @@ class DonationController extends Controller
                 $donation->save();
 
                 // Kirim email ke donor
-                $fundraising = Fundraising::find($donation->fundraising_id)->with(['company'])->first();
+                $fundraising_id = $request->fundraising_id;
+                $fundraising = Fundraising::where('id',$fundraising_id)->with(['company'])->first();
+           
+                
                 Mail::to($donor->email)->send(new DonationInstruction($donation, $donor,$fundraising));
                 
                 DB::commit();
@@ -124,13 +127,12 @@ class DonationController extends Controller
                 return BaseResponse::errorMessage('Donation not found');
             }
             // Cek status ke Midtrans
-            $serverKey = config('MIDTRANS_SERVER_KEY');
+            $serverKey = config('midtrans.MIDTRANS_SERVER_KEY');
             $authString = base64_encode($serverKey);
             // dd($authString);
             $orderId = $donation->order_id;
-            $midtransApiLink = config('MIDTRANS_API_LINK');
+            $midtransApiLink = config('midtrans.MIDTRANS_API_LINK');
             $midtransUrl = rtrim($midtransApiLink, '/') . '/v2/' . $orderId . '/status';
-
             $response = \Http::
                 withHeaders([
                     'Accept' => 'application/json',
