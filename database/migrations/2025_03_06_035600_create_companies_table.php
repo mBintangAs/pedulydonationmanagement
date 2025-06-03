@@ -13,13 +13,15 @@ return new class extends Migration
     {
         Schema::create('companies', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            $table->string('name')->unique();
             $table->string('address');
             $table->string('phone');
             $table->string('email');
             $table->string('link_default')->nullable();
             $table->string('logo')->nullable();
             $table->string('hex_color')->nullable();
+            // Fundraising yang ditampilkan di halaman utama
+            $table->unsignedBigInteger('fundraising_id')->nullable();
             // untuk acc admin
             $table->enum('status', ['menunggu','diterima','ditolak'])->default('menunggu');
             $table->timestamps();

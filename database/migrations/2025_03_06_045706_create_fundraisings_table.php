@@ -20,7 +20,7 @@ return new class extends Migration
             $table->date('start_date');
             $table->date('end_date');
             $table->enum('status', ['menunggu', 'aktif', 'selesai',])->default('menunggu');
-            $table->boolean('show_target_public')->default(false);
+            $table->boolean('is_hide_target')->default(false);
             $table->foreignId('company_id')->constrained()->restrictOnDelete();
             $table->timestamps();
         });

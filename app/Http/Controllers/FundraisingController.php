@@ -45,7 +45,7 @@ class FundraisingController extends Controller
                 'start_date' => 'required|date',
                 'end_date' => 'required|date|after_or_equal:start_date',
                 'company_id' => 'required|exists:companies,id',
-                'show_target_public' => 'nullable|boolean',
+                'is_hide_target' => 'nullable|boolean',
             ]);
 
             if ($validator->fails()) {
@@ -65,7 +65,7 @@ class FundraisingController extends Controller
                 'end_date' => $request->input('end_date'),
                 'status' => 'menunggu',
                 'company_id' => $request->input('company_id'),
-                'show_target_public' => $request->input('show_target_public', false),
+                'is_hide_target' => $request->input('is_hide_target', false),
             ]);
 
             return BaseResponse::successData($fundraising->toArray(), 'Data fundraising berhasil ditambahkan');
@@ -87,7 +87,7 @@ class FundraisingController extends Controller
                 'start_date' => 'required|date',
                 'status' => 'required|string|in:menunggu,aktif,selesai',
                 'end_date' => 'required|date|after_or_equal:start_date',
-                'show_target_public' => 'nullable|boolean',
+                'is_hide_target' => 'nullable|boolean',
             ]);
 
             if ($validator->fails()) {
@@ -109,7 +109,7 @@ class FundraisingController extends Controller
                 'start_date' => $request->input('start_date'),
                 'end_date' => $request->input('end_date'),
                 'status' => $request->input('status'),
-                'show_target_public' => $request->input('show_target_public', false),
+                'is_hide_target' => $request->input('is_hide_target', false),
             ]);
 
             return BaseResponse::successData($fundraising->toArray(), 'Data fundraising berhasil diubah');

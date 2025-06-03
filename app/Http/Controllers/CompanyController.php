@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Company;
+use App\Models\Fundraising;
 use App\Response\BaseResponse;
 use Illuminate\Http\Request;
 use Log;
@@ -38,7 +39,6 @@ class CompanyController extends Controller
 
     public function update (Request $request, $id)
     {
-        
         $validator = \Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'address' => 'required|string|max:255',
@@ -47,6 +47,7 @@ class CompanyController extends Controller
             'hex_color' => 'nullable|string',
             'link_default' => 'nullable|string',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,svg|max:2048',
+            'fundraising_id' => 'nullable|exists:fundraisings,id',
         ]);
         
         if ($validator->fails()) {
@@ -60,12 +61,26 @@ class CompanyController extends Controller
             $file = $request->file('logo');
             $filename = time() . '_' . $file->getClientOriginalName();
             $path = $file->storeAs('logo', $filename, 'public');
-            Log::info('Logo uploaded to: ' . $path);
             $validatedData['logo'] = $path;
         } 
         $company->update($validatedData);
 
         return BaseResponse::successData($company->toArray(), 'Company updated successfully');
     }
+    public function findCompany(Request $request,$id)
+    {
+        
 
+        $company = Company::where('id', $id)->first();
+
+        if (!$company) {
+            return BaseResponse::errorMessage('Company not found');
+        }
+        if($company->fundraising_id==''){
+            $fundraising = Fundraising::where('company_id', $company->id)->orderBy('created_at','desc')->first();
+            $company->fundraising_id = $fundraising->id;
+            $company->save();
+        }
+        return BaseResponse::successData($company->toArray(), 'Company found successfully');
+    }
 }

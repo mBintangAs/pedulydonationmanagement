@@ -26,6 +26,7 @@ Route::post('/donation', [DonationController::class, 'donation']);
 Route::post('/donation-callback', [DonationController::class, 'callback']);
 Route::post('/donation-check', [DonationController::class, 'checkStatus']);
 
+Route::get('/company-find/{id}', [CompanyController::class, 'findCompany']);
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/user', [AuthController::class, 'user']);
