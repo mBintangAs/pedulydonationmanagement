@@ -20,17 +20,30 @@ class DonationController extends Controller
     //
     public function donation(Request $request)
     {
-        $validator = \Validator::make($request->all(), [
-            'name' => 'nullable|string|max:255',
-            'email' => 'required|email|max:255',
-            'phone' => 'nullable|string|max:16',
-            'fundraising_id' => 'required|integer|exists:fundraisings,id',
-            'wish' => 'nullable|string|max:255',
-            'total' => 'required|numeric|min:0',
-            'method' => 'required|string',
-            'bank_name' => 'nullable|string|max:255',
-            'is_anonymous' => 'required|boolean',
-        ]);
+        if ($request->input('method') == 'manual') {
+            $request->merge(['email' => '-']);
+            $validator = \Validator::make($request->all(), [
+                'name' => 'nullable|string|max:255',
+                'email' => 'required|max:255',
+                'fundraising_id' => 'required|integer|exists:fundraisings,id',
+                'wish' => 'nullable|string|max:255',
+                'total' => 'required|numeric|min:0',
+                'method' => 'required|string',
+                'is_anonymous' => 'required|boolean',
+            ]);
+        }else{
+            $validator = \Validator::make($request->all(), [
+                'name' => 'nullable|string|max:255',
+                'email' => 'required|email|max:255',
+                'phone' => 'nullable|string|max:16',
+                'fundraising_id' => 'required|integer|exists:fundraisings,id',
+                'wish' => 'nullable|string|max:255',
+                'total' => 'required|numeric|min:0',
+                'method' => 'required|string',
+                'bank_name' => 'nullable|string|max:255',
+                'is_anonymous' => 'required|boolean',
+            ]);
+        }
 
         if ($validator->fails()) {
             return BaseResponse::errorMessage(
@@ -40,14 +53,26 @@ class DonationController extends Controller
         try {
             //code...
             DB::beginTransaction();
-            $donor = Donor::where('email', $request->email)->first();
-            if (!$donor) {
-                $donor = new Donor();
-                $donor->name = $request->name;
-                $donor->email = $request->email;
-                $donor->phone = $request->phone;
-                $donor->save();
+
+            if ($request->method != 'manual') {
+                $donor = Donor::where('email', $request->email)->first();
+                if (!$donor) {
+                    $donor = new Donor();
+                    $donor->name = $request->name;
+                    $donor->email = $request->email;
+                    $donor->phone = $request->phone;
+                    $donor->save();
+                }
+            } else {
+                $donor = Donor::where('name', $request->name)->first();
+                if (!$donor) {
+                    $donor = new Donor();
+                    $donor->name = $request->name;
+                    $donor->email = '-';
+                    $donor->save();
+                }
             }
+
             $donation = new Donation();
             $donation->fundraising_id = $request->fundraising_id;
             $donation->is_anonymous = $request->is_anonymous;
@@ -57,33 +82,39 @@ class DonationController extends Controller
             $donation->method = $request->method;
             // dd($donation->method);
             $donation->order_id = 'INV' . time();
-            $midtrans = new MidtransCharge($donation->method, $donation->order_id, $donation->total);
-            if ($request->method == 'bank_transfer') {
-                if (!$request->bank_name) {
-                    return BaseResponse::errorMessage('Bank name is required');
-                }
-                $midtrans->setBankName($request->bank_name);
-            }
-            $response = $midtrans->charge();
-            if (isset($response['status_code']) && $response['status_code'] == 201) {
-                // dd($response);
-                $donation->payment_link = $request->method == 'bank_transfer' ? $response['va_numbers'][0]['va_number'] : $response['actions'][0]['url'];
-                $donation->expiring_time = date('Y-m-d H:i:s', strtotime($response['transaction_time'] . ' + 3 hours'));
-                $donation->status = $response['transaction_status'];
-                $donation->save();
+            if ($request->method != 'manual') {
 
-                // Kirim email ke donor
-                $fundraising_id = $request->fundraising_id;
-                $fundraising = Fundraising::where('id',$fundraising_id)->with(['company'])->first();
-           
-                
-                Mail::to($donor->email)->send(new DonationInstruction($donation, $donor,$fundraising));
-                
-                DB::commit();
-                return BaseResponse::successData($donation->toArray(), 'Berhasil melakukan donasi');
+                $midtrans = new MidtransCharge($donation->method, $donation->order_id, $donation->total);
+                if ($request->method == 'bank_transfer') {
+                    if (!$request->bank_name) {
+                        return BaseResponse::errorMessage('Bank name is required');
+                    }
+                    $midtrans->setBankName($request->bank_name);
+                }
+                $response = $midtrans->charge();
+                if (isset($response['status_code']) && $response['status_code'] == 201) {
+                    // dd($response);
+                    $donation->payment_link = $request->method == 'bank_transfer' ? $response['va_numbers'][0]['va_number'] : $response['actions'][0]['url'];
+                    $donation->expiring_time = date('Y-m-d H:i:s', strtotime($response['transaction_time'] . ' + 3 hours'));
+                    $donation->status = $response['transaction_status'];
+                    $donation->save();
+                    // Kirim email ke donor
+                    $fundraising_id = $request->fundraising_id;
+                    $fundraising = Fundraising::where('id', $fundraising_id)->with(['company'])->first();
+
+                    Mail::to($donor->email)->send(new DonationInstruction($donation, $donor, $fundraising));
+
+                } else {
+                    throw new \Exception($response->message);
+                }
             } else {
-                throw new \Exception($response->message);
+                $donation->status = 'settlement';
+                $donation->payment_link = '-';
+                $donation->save();
             }
+
+            DB::commit();
+            return BaseResponse::successData($donation->toArray(), 'Berhasil melakukan donasi');
         } catch (\Throwable $th) {
             //throw $th;
             DB::rollBack();
@@ -110,7 +141,7 @@ class DonationController extends Controller
             }
 
             $donation->status = $request->transaction_status;
-            
+
             $donation->save();
 
             return BaseResponse::successMessage('Callback processed successfully');
@@ -122,7 +153,7 @@ class DonationController extends Controller
     public function checkStatus(Request $request)
     {
         try {
-            $donation = Donation::where('order_id', $request->order_id)->with(['fundraising','donor','fundraising.company'])->first();
+            $donation = Donation::where('order_id', $request->order_id)->with(['fundraising', 'donor', 'fundraising.company'])->first();
             if (!$donation) {
                 return BaseResponse::errorMessage('Donation not found');
             }
@@ -149,10 +180,10 @@ class DonationController extends Controller
             if (isset($midtransStatus['transaction_status']) && $donation->status !== $midtransStatus['transaction_status']) {
                 $donation->status = $midtransStatus['transaction_status'];
                 if ($midtransStatus['transaction_status'] == 'settlement') {
-                    Mail::to($donation->donor->email)->send(new DonationSuccess($donation,$donation->donor,$donation->fundraising ));
+                    Mail::to($donation->donor->email)->send(new DonationSuccess($donation, $donation->donor, $donation->fundraising));
                 }
                 if ($midtransStatus['transaction_status'] == 'expire') {
-                    Mail::to($donation->donor->email)->send(new DonationExpired($donation,$donation->donor,$donation->fundraising ));
+                    Mail::to($donation->donor->email)->send(new DonationExpired($donation, $donation->donor, $donation->fundraising));
                 }
                 $donation->save();
             }
@@ -162,4 +193,5 @@ class DonationController extends Controller
             return BaseResponse::errorMessage('Failed to check donation status');
         }
     }
+
 }
