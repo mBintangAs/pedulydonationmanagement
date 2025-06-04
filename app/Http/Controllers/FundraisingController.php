@@ -123,7 +123,7 @@ class FundraisingController extends Controller
     {
         try {
             $validator = \Validator::make($request->all(), [
-                'news' => 'required|string',
+                'news' => 'required',
                 'fundraising_id' => 'required|exists:fundraisings,id',
             ]);
 
@@ -140,9 +140,15 @@ class FundraisingController extends Controller
             ]);
             $fundraisingNews->save();
 
-            $emails = $fundraising->donations->pluck('donor.email')->unique();
+            $emails = $fundraising->donations
+                ->where('status', 'settlement')
+                ->pluck('donor.email')
+                ->filter()
+                ->unique();
             foreach ($emails as $email) {
-                Mail::to($email)->send(new \App\Mail\FundraisingNews());
+                if ($email) {
+                    Mail::to($email)->send(new \App\Mail\FundraisingNews());
+                }
             }
             DB::commit();
             return BaseResponse::successData($fundraising->toArray(), 'Status fundraising berhasil diubah');

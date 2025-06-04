@@ -21,10 +21,9 @@ class DonationController extends Controller
     public function donation(Request $request)
     {
         if ($request->input('method') == 'manual') {
-            $request->merge(['email' => '-']);
             $validator = \Validator::make($request->all(), [
                 'name' => 'nullable|string|max:255',
-                'email' => 'required|max:255',
+                'email' => 'nullable|max:255',
                 'fundraising_id' => 'required|integer|exists:fundraisings,id',
                 'wish' => 'nullable|string|max:255',
                 'total' => 'required|numeric|min:0',
