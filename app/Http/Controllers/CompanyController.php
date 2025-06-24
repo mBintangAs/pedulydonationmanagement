@@ -63,6 +63,31 @@ class CompanyController extends Controller
             $path = $file->storeAs('logo', $filename, 'public');
             $validatedData['logo'] = $path;
         } 
+        if ($request->hasFile('npwp')) {
+            $validator = \Validator::make($request->all(), [
+                'npwp' => 'nullable|file|mimes:pdf,png,jpg,jpeg|max:2048',
+            ]);
+            if ($validator->fails()) {
+                return BaseResponse::errorMessage($validator->errors()->first());
+            }
+            $file = $request->file('npwp');
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $path = $file->storeAs('npwp', $filename, 'public');
+            $validatedData['npwp'] = $path;
+        } 
+        if ($request->hasFile('akta_pendirian')) {
+            $validator = \Validator::make($request->all(), [
+                'akta_pendirian' => 'nullable|file|mimes:pdf,png,jpg,jpeg|max:2048',
+            ]);
+            if ($validator->fails()) {
+                return BaseResponse::errorMessage($validator->errors()->first());
+            }
+
+            $file = $request->file('akta_pendirian');
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $path = $file->storeAs('akta_pendirian', $filename, 'public');
+            $validatedData['akta_pendirian'] = $path;
+        } 
         $company->update($validatedData);
 
         return BaseResponse::successData($company->toArray(), 'Company updated successfully');

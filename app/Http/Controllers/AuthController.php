@@ -119,7 +119,7 @@ class AuthController extends Controller
             $company->name = $request->company_name;
             $company->address = $request->company_address;
             $company->phone = $request->company_phone;
-            $company->email = $request->company_email;
+            $company->email = $request->company_email;  
 
             $company->save();
 

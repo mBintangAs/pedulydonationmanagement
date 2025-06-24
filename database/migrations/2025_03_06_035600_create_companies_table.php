@@ -20,6 +20,8 @@ return new class extends Migration
             $table->string('link_default')->nullable();
             $table->string('logo')->nullable();
             $table->string('hex_color')->nullable();
+     
+
             // Fundraising yang ditampilkan di halaman utama
             $table->unsignedBigInteger('fundraising_id')->nullable();
             // untuk acc admin
