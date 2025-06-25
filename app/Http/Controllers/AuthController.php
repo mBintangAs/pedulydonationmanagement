@@ -29,7 +29,7 @@ class AuthController extends Controller
         if ($request->isMethod('get')) {
             return BaseResponse::unauthorizedMessage('Anda harus login terlebih dahulu');
         }
-      
+
         $credentials = $request->only('email', 'password');
 
         if (Auth::attempt($credentials)) {
@@ -116,15 +116,40 @@ class AuthController extends Controller
             DB::beginTransaction();
 
             $company = new Company();
+            if ($request->hasFile('npwp')) {
+                $validator = \Validator::make($request->all(), [
+                    'npwp' => 'nullable|file|mimes:pdf,png,jpg,jpeg|max:2048',
+                ]);
+                if ($validator->fails()) {
+                    return BaseResponse::errorMessage($validator->errors()->first());
+                }
+                $file = $request->file('npwp');
+                $filename = time() . '_' . $file->getClientOriginalName();
+                $path = $file->storeAs('npwp', $filename, 'public');
+                $company->npwp = $path;
+            }
+            if ($request->hasFile('akta_pendirian')) {
+                $validator = \Validator::make($request->all(), [
+                    'akta_pendirian' => 'nullable|file|mimes:pdf,png,jpg,jpeg|max:2048',
+                ]);
+                if ($validator->fails()) {
+                    return BaseResponse::errorMessage($validator->errors()->first());
+                }
+
+                $file = $request->file('akta_pendirian');
+                $filename = time() . '_' . $file->getClientOriginalName();
+                $path = $file->storeAs('akta_pendirian', $filename, 'public');
+                $company->akta_pendirian = $path;
+            }
             $company->name = $request->company_name;
             $company->address = $request->company_address;
             $company->phone = $request->company_phone;
-            $company->email = $request->company_email;  
+            $company->email = $request->company_email;
 
             $company->save();
 
             $role = new Role();
-            
+
             $role->name = 'admin';
             $role->company_id = $company->id;
             $role->save();
@@ -173,7 +198,7 @@ class AuthController extends Controller
 
     public function user(Request $request)
     {
-        $user = User::where('id',$request->user()->id)->with(['roles','company'])->first();
+        $user = User::where('id', $request->user()->id)->with(['roles', 'company'])->first();
         if (!$user) {
             return BaseResponse::notFoundMessage('User not found');
         }
